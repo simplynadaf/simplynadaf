@@ -21,7 +21,7 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ gh stats --live</text>
 <circle class="dot" cx="846" cy="23" r="3.5" fill="#3fb950"/>
 <circle class="dot" cx="846" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
-<text x="40" y="82" class="gr" style="font-size:13px">[contributions]</text><text x="190" y="82" class="fg" font-weight="700" style="font-size:16px">599 this year</text>
+<text x="40" y="82" class="gr" style="font-size:13px">[contributions]</text><text x="190" y="82" class="fg" font-weight="700" style="font-size:16px">600 this year</text>
 <text x="40" y="122" class="gr" style="font-size:13px">[stars]</text><text x="190" y="122" class="fg" font-weight="700" style="font-size:16px">15</text>
 <text x="40" y="162" class="gr" style="font-size:13px">[pull requests]</text><text x="190" y="162" class="fg" font-weight="700" style="font-size:16px">14</text>
 <text x="440" y="82" class="gr" style="font-size:13px">[followers]</text><text x="590" y="82" class="fg" font-weight="700" style="font-size:16px">13</text>
