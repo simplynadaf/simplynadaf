@@ -371,83 +371,90 @@ function panelCmd(cmd, w, h, title, bodyLines) {
 }
 
 function writeCity(days, meta) {
-  // Isometric night skyline: one building per day of the last year.
-  // Inspired by the "contribution city" pattern — rebuilt as true 3D iso boxes.
+  // Isometric night skyline: one building per day, laid out as a shallow receding
+  // strip (7 rows deep, like a week) that sweeps diagonally across the panel.
   const W = 880, H = 360;
   const max = Math.max(1, ...days.map(d => d.contributionCount));
   const active = days.filter(d => d.contributionCount > 0).length;
 
-  // isometric projection: tile half-width TW, half-depth TD (2:1 iso)
-  const TW = 8, TD = 4;
-  const COLS = 30;                 // buildings per row
-  const rows = Math.ceil(days.length / COLS);
-  // center the diamond: width span = (COLS+rows)*TW ; place origin so it fits
-  const spanW = (COLS + rows) * TW;
-  const ox = Math.round(W / 2 - (COLS - rows) * TW / 2);  // horizontally center the diamond
-  const oy = 196;
+  // iso tile: half-width TW, half-depth TD (2:1). Bigger = crisper than before.
+  const TW = 9, TD = 4.5;
+  const ROWS = 7;                                  // shallow depth (one week)
+  const COLS = Math.ceil(days.length / ROWS);      // ~53 columns across
+  // Lay columns left→right, descending. Origin upper-left; strip sweeps down-right.
+  const ox = 70, oy = 120;
 
-  // intensity -> top-face color (roof glows brighter with activity)
-  const roofFor = (c) => {
-    if (c === 0) return '#12324a';
+  // intensity tiers -> [roof(top), leftFace, rightFace]. Brighter all round than before.
+  const tierFor = (c) => {
+    if (c === 0) return 0;
     const r = c / max;
-    if (r < 0.25) return '#1f6f99';
-    if (r < 0.5) return '#2f81f7';
-    if (r < 0.75) return '#1fd5ff';
-    return '#7df9ff';
+    if (r < 0.2) return 1;
+    if (r < 0.4) return 2;
+    if (r < 0.65) return 3;
+    return 4;
   };
-  const LEFT = '#1a2440', RIGHT = '#111831';  // shaded faces (constant for night look)
+  const PAL = [
+    ['#163a52', '#0f2336', '#0b1a28'], // quiet
+    ['#1f6f99', '#15425c', '#0f3045'], // low
+    ['#2f81f7', '#1d4f94', '#163a6e'], // mid
+    ['#1fd5ff', '#148fb5', '#0f6f8c'], // high
+    ['#7df9ff', '#2fb6d6', '#1f8aa6'], // skyscraper
+  ];
 
-  // iso transform
-  const iso = (col, row) => ({
-    x: ox + (col - row) * TW,
-    y: oy + (col + row) * TD,
-  });
+  const iso = (col, row) => ({ x: ox + (col + row) * TW, y: oy + (col - row) * TD });
 
-  // draw back-to-front (far rows first) so nearer buildings overlap correctly
+  // draw far→near. Nearer = larger (row - col going toward viewer). Paint back first.
+  const order = days.map((d, i) => ({ d, col: Math.floor(i / ROWS), row: i % ROWS }));
+  order.sort((a, b) => (a.row - a.col) - (b.row - b.col));
+
   let buildings = '', windows = '';
-  const order = [];
-  days.forEach((d, i) => {
-    const col = i % COLS, row = Math.floor(i / COLS);
-    order.push({ d, col, row, i });
-  });
-  order.sort((a, b) => (a.row + a.col) - (b.row + b.col));
-
   for (const { d, col, row } of order) {
     const c = d.contributionCount;
+    const t = tierFor(c);
+    const [roof, lf, rf] = PAL[t];
     const base = iso(col, row);
-    const h = c === 0 ? 3 : 8 + Math.sqrt(c / max) * 90;
-    const roof = roofFor(c);
-    // bottom diamond corners
     const bx = base.x, by = base.y;
+    if (bx - TW < 22 || bx + TW > W - 22) continue;  // keep inside panel
+    const h = c === 0 ? 4 : 12 + Math.sqrt(c / max) * 104;
     const topY = by - h;
-    // left face
-    buildings += `<path d="M${(bx - TW).toFixed(1)},${(by - TD).toFixed(1)}L${bx.toFixed(1)},${by.toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}L${(bx - TW).toFixed(1)},${(topY - TD).toFixed(1)}Z" fill="${LEFT}"/>`;
-    // right face
-    buildings += `<path d="M${bx.toFixed(1)},${by.toFixed(1)}L${(bx + TW).toFixed(1)},${(by - TD).toFixed(1)}L${(bx + TW).toFixed(1)},${(topY - TD).toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}Z" fill="${RIGHT}"/>`;
-    // top face (roof diamond)
+    // left face (bx-TW..bx)
+    buildings += `<path d="M${(bx - TW).toFixed(1)},${(by - TD).toFixed(1)}L${bx.toFixed(1)},${by.toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}L${(bx - TW).toFixed(1)},${(topY - TD).toFixed(1)}Z" fill="${lf}"/>`;
+    // right face (bx..bx+TW)
+    buildings += `<path d="M${bx.toFixed(1)},${by.toFixed(1)}L${(bx + TW).toFixed(1)},${(by - TD).toFixed(1)}L${(bx + TW).toFixed(1)},${(topY - TD).toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}Z" fill="${rf}"/>`;
+    // roof diamond
     buildings += `<path d="M${bx.toFixed(1)},${topY.toFixed(1)}L${(bx + TW).toFixed(1)},${(topY - TD).toFixed(1)}L${bx.toFixed(1)},${(topY - 2 * TD).toFixed(1)}L${(bx - TW).toFixed(1)},${(topY - TD).toFixed(1)}Z" fill="${roof}"/>`;
-    // lit window dots on busy buildings
-    if (c > 0 && h > 40) {
-      const n = Math.min(3, Math.floor(h / 28));
-      for (let w = 0; w < n; w++) {
-        const wy = topY + 10 + w * 14;
-        windows += `<rect x="${(bx - 6).toFixed(1)}" y="${wy.toFixed(1)}" width="2.5" height="3" fill="#ffe9a8" opacity=".85"/>`;
-        windows += `<rect x="${(bx + 3).toFixed(1)}" y="${(wy + TD).toFixed(1)}" width="2.5" height="3" fill="#ffe9a8" opacity=".7"/>`;
+    // crisp window grid on both faces (skip quiet plots)
+    if (t >= 1 && h > 22) {
+      const floors = Math.max(1, Math.floor((h - 10) / 12));
+      const winColor = t >= 3 ? '#bdf6ff' : '#9fe0ff';
+      for (let f = 0; f < floors; f++) {
+        const wy = topY + 8 + f * 12;
+        if (wy > by - 6) break;
+        // left face: 2 windows
+        windows += `<rect x="${(bx - TW + 2.5).toFixed(1)}" y="${(wy - (bx - TW + 2.5 - bx) * TD / TW - TD * 0).toFixed(1)}" width="2.6" height="3.4" fill="${winColor}" opacity=".9"/>`;
+        windows += `<rect x="${(bx - 4.5).toFixed(1)}" y="${(wy - 2).toFixed(1)}" width="2.6" height="3.4" fill="${winColor}" opacity=".75"/>`;
+        // right face: 2 windows
+        windows += `<rect x="${(bx + 2).toFixed(1)}" y="${(wy - 1).toFixed(1)}" width="2.6" height="3.4" fill="${winColor}" opacity=".85"/>`;
+        windows += `<rect x="${(bx + TW - 4.6).toFixed(1)}" y="${(wy - 3).toFixed(1)}" width="2.6" height="3.4" fill="${winColor}" opacity=".7"/>`;
       }
     }
   }
 
-  // night sky: stars
+  // night sky: stars (upper band only, away from buildings)
   let stars = '';
   let seed = 7;
   const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
-  for (let i = 0; i < 46; i++) {
-    const sx = 40 + rnd() * (W - 80), sy = 50 + rnd() * 120;
-    const r = (0.5 + rnd() * 0.9).toFixed(1);
+  for (let i = 0; i < 48; i++) {
+    const sx = 40 + rnd() * (W - 80), sy = 48 + rnd() * 90;
+    const r = (0.5 + rnd() * 1.0).toFixed(1);
     const op = (0.35 + rnd() * 0.5).toFixed(2);
     const tw = rnd() > 0.5 ? ' class="twinkle"' : '';
     stars += `<circle${tw} cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r}" fill="#c9d1d9" opacity="${op}"/>`;
   }
+  // gradient legend "quiet → skyscraper"
+  let legend = '<text x="40" y="332" class="dim" style="font-size:11px">quiet</text>';
+  PAL.forEach((p, i) => { legend += `<rect x="${86 + i * 16}" y="324" width="12" height="10" fill="${p[0]}"/>`; });
+  legend += '<text x="178" y="332" class="dim" style="font-size:11px">skyscraper</text>';
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="t d">
 <title id="t">Contribution city</title>
@@ -456,8 +463,8 @@ function writeCity(days, meta) {
 ${FF}
 text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
 .cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}.fg{fill:#c9d1d9}
-@keyframes tw{0%,100%{opacity:.85}50%{opacity:.15}}
-@keyframes fly{from{transform:translate(-30px,0)}to{transform:translate(910px,-26px)}}
+@keyframes tw{0%,100%{opacity:.85}50%{opacity:.12}}
+@keyframes fly{from{transform:translate(-30px,0)}to{transform:translate(910px,-24px)}}
 @keyframes blink{0%,90%,100%{opacity:0}93%{opacity:1}}
 .twinkle{animation:tw 3.5s ease-in-out infinite}
 .plane{animation:fly 24s linear infinite}
@@ -475,15 +482,16 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ render ./contribution-city --last 365d</text>
 <text x="${W - 34}" y="28" text-anchor="end" class="dim" style="font-size:12px">one building = one day</text>
 <g>${stars}</g>
-<circle cx="120" cy="86" r="34" fill="url(#moonglow)"/>
-<circle cx="120" cy="86" r="13" fill="#e6edf3"/>
-<circle cx="126" cy="81" r="11.5" fill="#050812"/>
-<g class="plane"><g transform="translate(0 70)"><rect x="0" y="0" width="13" height="2" rx="1" fill="#484f58"/><circle class="bl" cx="0" cy="1" r="1.5" fill="#ff7b72"/><circle class="bl" cx="13" cy="1" r="1.5" fill="#f0f6fc" style="animation-delay:.7s"/></g></g>
-<text x="${W - 34}" y="62" text-anchor="end" class="dim" style="font-size:12px"><tspan class="cy" font-weight="700">${fmt(meta.total)}</tspan> contributions · 365 days</text>
-<text x="${W - 34}" y="82" text-anchor="end" class="dim" style="font-size:12px">busiest <tspan class="fg">${esc(meta.busiest.date)}</tspan> · ${meta.busiest.contributionCount}</text>
-<text x="${W - 34}" y="102" text-anchor="end" class="dim" style="font-size:12px">${active} active days</text>
+<circle cx="792" cy="150" r="34" fill="url(#moonglow)"/>
+<circle cx="792" cy="150" r="13" fill="#e6edf3"/>
+<circle cx="798" cy="145" r="11.5" fill="#050812"/>
+<g class="plane"><g transform="translate(0 76)"><rect x="0" y="0" width="13" height="2" rx="1" fill="#484f58"/><circle class="bl" cx="0" cy="1" r="1.5" fill="#ff7b72"/><circle class="bl" cx="13" cy="1" r="1.5" fill="#f0f6fc" style="animation-delay:.7s"/></g></g>
+<text x="${W - 34}" y="60" text-anchor="end" class="dim" style="font-size:12px"><tspan class="cy" font-weight="700">${fmt(meta.total)}</tspan> contributions · 365 days</text>
+<text x="${W - 34}" y="80" text-anchor="end" class="dim" style="font-size:12px">busiest <tspan class="fg">${esc(meta.busiest.date)}</tspan> · ${meta.busiest.contributionCount}</text>
+<text x="${W - 34}" y="100" text-anchor="end" class="dim" style="font-size:12px">${active} active days</text>
 ${buildings}
-<g filter="url(#g)">${windows}</g>
+${windows}
+${legend}
 </svg>\n`;
   fs.writeFileSync(path.join(ROOT, 'assets', 'contribution-city.svg'), svg);
 }
