@@ -84,13 +84,13 @@ async function main() {
   }
   const busiest = days.reduce((m, d) => d.contributionCount > m.contributionCount ? d : m, days[0]);
 
-  writeStats({
+  const statObj = {
     stars, forks, followers: u.followers.totalCount,
     repos: u.repositories.totalCount,
     yearContribs: cal.totalContributions,
     prs: u.allPRs.totalCount, mergedPRs: u.mergedPRs.totalCount,
     cur, longest, createdAt: u.createdAt,
-  });
+  };
   writeCity(days, { total: cal.totalContributions, busiest });
 
   // Dynamic project cards: top repos by stars, then recency; skip archived + the profile repo.
@@ -111,20 +111,22 @@ async function main() {
   const langs = Object.entries(langBytes)
     .sort((a, b) => b[1] - a[1]).slice(0, 6)
     .map(([name, size]) => ({ name, pct: size / langTotal }));
-  writeSpectrum(langs);
 
-  // ---- D) now-building ticker (most recently pushed non-archived, non-profile repo) ----
+  // ---- now-building ticker (most recently pushed non-archived, non-profile repo) ----
   const latest = repos
     .filter(r => !r.isArchived && r.name.toLowerCase() !== USER.toLowerCase())
     .sort((a, b) => new Date(b.pushedAt) - new Date(a.pushedAt))[0];
   writeTicker(latest, { repos: u.repositories.totalCount });
 
-  // ---- E) open-source radar: PRs opened in OTHER people's repos ----
+  // ---- open-source radar: PRs opened in OTHER people's repos ----
   const external = (cc.pullRequestContributionsByRepository || [])
     .filter(x => !x.repository.isPrivate && x.repository.owner.login.toLowerCase() !== USER.toLowerCase())
     .map(x => ({ repo: x.repository.nameWithOwner, count: x.contributions.totalCount }))
     .sort((a, b) => b.count - a.count).slice(0, 8);
   writeRadar(external, { reviews: cc.totalPullRequestReviewContributions });
+
+  // Dev.to data (feeds the combined stats box + writing section)
+  let devTotals = { articles: 0, reactions: 0, comments: 0, joined: null };
 
   // Dev.to writing section (optional) — also feeds the B) signal oscilloscope + Dev stats block.
   const devUser = process.env.DEVTO_USER;
@@ -141,19 +143,21 @@ async function main() {
         if (Array.isArray(all) && all.length) {
           writeWriting(all.slice(0, 4));
           writeSignal(all.slice(0, 16));
-          const totals = {
+          devTotals = {
             articles: all.length,
             reactions: all.reduce((a, x) => a + (x.public_reactions_count || 0), 0),
             comments: all.reduce((a, x) => a + (x.comments_count || 0), 0),
             joined: profile ? profile.joined_at : null,
           };
-          writeDevStats(totals);
         }
       }
     } catch (e) { console.warn('Dev.to fetch failed:', e.message); }
   }
 
-  console.log('Regenerated stats, city, cards, spectrum, ticker, radar' + (devUser ? ', writing, signal, devstats' : ''));
+  // Build the ONE combined stats box now that GitHub + languages + Dev.to are all available.
+  writeStatsBox(statObj, langs, devTotals);
+
+  console.log('Regenerated combined stats box, city, cards, ticker, radar' + (devUser ? ', writing, signal' : ''));
 }
 
 // ---- dynamic project cards ----
@@ -248,8 +252,10 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 </svg>\n`;
 }
 function writeWriting(arts) {
-  // section divider
-  fs.writeFileSync(path.join(ROOT, 'assets', 'writing.svg'), sectionDivider('WRITING'));
+  // section divider — George-style ~/writing // 06
+  fs.writeFileSync(path.join(ROOT, 'assets', 'writing.svg'), sectionDivider('writing', '06', 'tail -n 4 ~/dev.to/posts.log'));
+  // projects divider — ~/projects // 04
+  fs.writeFileSync(path.join(ROOT, 'assets', 'projects.svg'), sectionDivider('projects', '04', 'ls -l ~/projects'));
   const manifest = [];
   arts.forEach((a, i) => {
     const file = `writing/post-${i + 1}.svg`;
@@ -259,24 +265,30 @@ function writeWriting(arts) {
   });
   fs.writeFileSync(path.join(ROOT, 'assets', 'writing', 'posts.json'), JSON.stringify(manifest, null, 2));
 }
-function sectionDivider(label) {
+function sectionDivider(label, section, cmd) {
+  // George-style section header: "~/name" (cyan, underlined) left, "// NN" right,
+  // then an optional "$ command" subline. Rendered on a 60px bar.
+  const name = String(label).toLowerCase().replace(/\s+/g, '-');
+  const secTag = section ? `<text x="864" y="26" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:12px">// ${section}</text>` : '';
+  const cmdLine = cmd ? `<text x="16" y="52" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> ${esc(cmd)}</text>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="880" height="60" viewBox="0 0 880 60" role="img" aria-labelledby="t">
 <title id="t">${esc(label)}</title>
 <style>
 ${FF}
 text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
-.cy{fill:#00d9ff}
+.cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .dot{animation:pulse 2s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 <defs><filter id="gd" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
 <rect width="880" height="60" fill="#03040a"/>
-<line x1="16" y1="30" x2="300" y2="30" stroke="#00d9ff" stroke-opacity=".3"/>
-<line x1="580" y1="30" x2="864" y2="30" stroke="#00d9ff" stroke-opacity=".3"/>
-<circle class="dot" cx="312" cy="30" r="3.5" fill="#00d9ff"/><circle class="dot" cx="312" cy="30" r="3.5" fill="#00d9ff" filter="url(#gd)"/>
-<text x="440" y="35" text-anchor="middle" letter-spacing="4" class="cy" font-weight="700" style="font-size:16px">// ${esc(label)}</text>
-<circle class="dot" cx="568" cy="30" r="3.5" fill="#00d9ff"/><circle class="dot" cx="568" cy="30" r="3.5" fill="#00d9ff" filter="url(#gd)"/>
+<text x="16" y="26" class="cy" font-weight="700" style="font-size:17px"><tspan fill="#6e7681">~/</tspan>${esc(name)}</text>
+<text x="16" y="26" class="cy" font-weight="700" filter="url(#gd)" opacity=".5" style="font-size:17px"><tspan fill="#6e7681">~/</tspan>${esc(name)}</text>
+<line x1="16" y1="33" x2="${34 + name.length * 10}" y2="33" stroke="#00d9ff" stroke-width="2"/>
+<line x1="16" y1="33" x2="${34 + name.length * 10}" y2="33" stroke="#00d9ff" stroke-width="3" filter="url(#gd)" opacity=".6"/>
+${secTag}
+${cmdLine}
 </svg>\n`;
 }
 
@@ -319,6 +331,84 @@ function statTile(x, y, w, label, big, sub) {
 <text x="${x + 16}" y="${y + 52}" font-weight="700" fill="#00d9ff" style="font-size:28px">${esc(big)}</text>
 <text x="${x + 16}" y="${y + 80}" fill="#6e7681" style="font-size:12px">${esc(sub)}</text>`;
 }
+
+// smaller stat tile for the Dev.to row (shorter height)
+function miniTile(x, y, w, label, big, sub) {
+  const h = 76;
+  return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#00d9ff" fill-opacity=".035" stroke="#00d9ff" stroke-opacity=".35"/>
+<path d="M${x} ${y + 12}V${y}H${x + 12}" fill="none" stroke="#00d9ff" stroke-width="2"/>
+<text x="${x + 14}" y="${y + 22}" letter-spacing="1.2" class="dim" style="font-size:9.5px">${esc(label)}</text>
+<text x="${x + 14}" y="${y + 48}" font-weight="700" fill="#00d9ff" filter="url(#g)" opacity=".5" style="font-size:23px">${esc(big)}</text>
+<text x="${x + 14}" y="${y + 48}" font-weight="700" fill="#00d9ff" style="font-size:23px">${esc(big)}</text>
+<text x="${x + 14}" y="${y + 68}" fill="#6e7681" style="font-size:10.5px">${esc(sub)}</text>`;
+}
+
+// ONE combined stats box (George-style): GitHub stats + languages + Dev.to, all in one panel.
+function writeStatsBox(s, langs, dev) {
+  const W = 880, H = 544;
+  const age = s.createdAt ? `${new Date().getFullYear() - new Date(s.createdAt).getFullYear()}y` : '';
+  const since = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+
+  // Zone 1: four big GitHub tiles
+  const tiles = [
+    statTile(40, 70, 182, 'CONTRIBUTIONS 2026', fmt(s.yearContribs), 'this year'),
+    statTile(238, 70, 182, 'TOTAL STARS', fmt(s.stars), 'across all repos'),
+    statTile(436, 70, 182, 'PULL REQUESTS', fmt(s.prs), `${fmt(s.mergedPRs)} merged`),
+    statTile(634, 70, 182, 'CURRENT STREAK', `${s.cur}d`, `longest: ${s.longest}d`),
+  ].join('\n');
+
+  // Zone 2a: a dotted key/value list (left)
+  const kv = [
+    ['followers', fmt(s.followers)],
+    ['public repos', fmt(s.repos)],
+    ['member since', `${since}${age ? ` (${age})` : ''}`],
+    ['hackathon wins', '1 \u2605'],
+  ];
+  let list = '';
+  kv.forEach(([k, v], i) => {
+    const y = 198 + i * 26;
+    const dots = '.'.repeat(Math.max(2, 20 - k.length));
+    list += `<text x="40" y="${y}" class="dim" style="font-size:13px">${esc(k)} <tspan fill="#2b3340">${dots}</tspan> <tspan class="fg" font-weight="700">${esc(v)}</tspan></text>`;
+  });
+
+  // Zone 2b: TOP LANGUAGES bar + legend (right half)
+  const lx0 = 436, lbarW = 380, lbarY = 196;
+  const colors = ['#00d9ff', '#3fb950', '#ff2bd6', '#f0b429', '#9d6bff', '#2bb0ff'];
+  let bar = '', leg = '', cx = lx0;
+  (langs || []).forEach((l, i) => {
+    const w = Math.max(2, l.pct * lbarW);
+    bar += `<rect x="${cx.toFixed(1)}" y="${lbarY}" width="${w.toFixed(1)}" height="14" fill="${colors[i % colors.length]}" opacity=".9"/>`;
+    bar += `<rect x="${cx.toFixed(1)}" y="${lbarY}" width="${w.toFixed(1)}" height="3" fill="#f0fbff" opacity=".5"/>`;
+    cx += w + 2;
+    const gx = lx0 + (i % 2) * 192, gy = 236 + Math.floor(i / 2) * 22;
+    leg += `<circle cx="${gx}" cy="${gy - 4}" r="4" fill="${colors[i % colors.length]}"/>`;
+    leg += `<text x="${gx + 12}" y="${gy}" class="fg" style="font-size:12px">${esc(l.name)} <tspan class="dim">${(l.pct * 100).toFixed(1)}%</tspan></text>`;
+  });
+  const langHead = `<text x="${lx0}" y="${lbarY - 8}" letter-spacing="1.5" class="dim" style="font-size:10.5px">TOP LANGUAGES</text>`;
+
+  // Zone 3: Dev.to sub-header + five mini tiles
+  const views = Number(process.env.DEVTO_VIEWS || 285938);
+  const followers = Number(process.env.DEVTO_FOLLOWERS || 34727);
+  const devHead = `<text x="40" y="360" class="dim" style="font-size:13px"><tspan class="gr">$</tspan> dev stats --user ${esc(DEVTO_USER_LABEL)}</text>`;
+  const dw = 150, dgap = 6, dx0 = 40;
+  const devTiles = [
+    miniTile(dx0 + 0 * (dw + dgap), 374, dw, 'ARTICLES', fmt(dev.articles), 'published'),
+    miniTile(dx0 + 1 * (dw + dgap), 374, dw, 'REACTIONS', fmt(dev.reactions), 'hearts, saves'),
+    miniTile(dx0 + 2 * (dw + dgap), 374, dw, 'COMMENTS', fmt(dev.comments), 'conversations'),
+    miniTile(dx0 + 3 * (dw + dgap), 374, dw, 'POST VIEWS', fmt(views), 'all-time reads'),
+    miniTile(dx0 + 4 * (dw + dgap), 374, dw, 'DEV FOLLOWERS', fmt(followers), 'on DEV'),
+  ].join('\n');
+
+  const sep = `<line x1="40" y1="328" x2="${W - 40}" y2="328" stroke="#00d9ff" stroke-opacity=".18"/>`;
+  const footer = `<text x="40" y="474" class="dim" style="font-size:11px"><tspan class="gr">$</tspan> auto-updated daily via GitHub Actions</text>
+<text x="${W - 40}" y="474" text-anchor="end" fill="#6e7681" style="font-size:11px">// last sync ${new Date().toISOString().slice(0, 10)}</text>`;
+
+  const body = `${tiles}\n${list}\n${langHead}${bar}${leg}\n${sep}\n${devHead}\n${devTiles}\n${footer}`;
+  const desc = `GitHub stats: ${fmt(s.yearContribs)} contributions, ${fmt(s.stars)} stars, ${fmt(s.prs)} PRs (${fmt(s.mergedPRs)} merged), ${fmt(s.followers)} followers, ${fmt(s.repos)} repos, member since ${since}, 1 hackathon win. Top languages: ${(langs || []).map(l => l.name).join(', ')}. Dev.to: ${fmt(dev.articles)} articles, ${fmt(dev.reactions)} reactions, ${fmt(dev.comments)} comments, ${fmt(views)} views, ${fmt(followers)} followers.`;
+  fs.writeFileSync(path.join(ROOT, 'assets', 'stats.svg'),
+    panelCmd(`$ gh stats --user ${GH_USER_LABEL}`, W, H, desc, body, '02'));
+}
+const GH_USER_LABEL = process.env.GH_USER || 'simplynadaf';
 
 function writeStats(s) {
   const W = 880, H = 300;
@@ -483,7 +573,7 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <rect x="16" y="8" width="${W - 32}" height="30" fill="#00d9ff" fill-opacity=".08"/>
 <line x1="16" y1="38" x2="${W - 16}" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ render ./contribution-city --last 365d</text>
-<text x="${W - 34}" y="28" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:11px">// 02</text>
+<text x="${W - 34}" y="28" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:11px">// 03</text>
 <text x="${W - 78}" y="28" text-anchor="end" class="dim" style="font-size:12px">one building = one day</text>
 <g>${stars}</g>
 <circle cx="792" cy="150" r="34" fill="url(#moonglow)"/>
