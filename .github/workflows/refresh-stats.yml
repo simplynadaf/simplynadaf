@@ -28,6 +28,9 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_USER: ${{ github.repository_owner }}
           DEVTO_USER: sarvar_04
+          # Views + followers aren't in the public Dev.to API — update these from your dashboard.
+          DEVTO_VIEWS: "285938"
+          DEVTO_FOLLOWERS: "34727"
         run: node scripts/generate.js
 
       - name: Commit if changed
