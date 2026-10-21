@@ -371,81 +371,119 @@ function panelCmd(cmd, w, h, title, bodyLines) {
 }
 
 function writeCity(days, meta) {
-  // Isometric neon skyline: one building per WEEK of the last year (52 fit cleanly).
-  const W = 880, H = 260;
-  // aggregate days into weeks of 7
-  const weeks = [];
-  for (let i = 0; i < days.length; i += 7) {
-    const slice = days.slice(i, i + 7);
-    weeks.push(slice.reduce((a, d) => a + d.contributionCount, 0));
-  }
-  const max = Math.max(1, ...weeks);
-  const baseY = 206, originX = 42;
-  const usable = (W - 34) - originX;
-  const depth = 5;                      // isometric depth (side face)
-  const gap = 2;
-  const fw = Math.max(8, Math.floor((usable - weeks.length * (depth + gap)) / weeks.length));
-  const step = fw + depth + gap;
+  // Isometric night skyline: one building per day of the last year.
+  // Inspired by the "contribution city" pattern — rebuilt as true 3D iso boxes.
+  const W = 880, H = 360;
+  const max = Math.max(1, ...days.map(d => d.contributionCount));
+  const active = days.filter(d => d.contributionCount > 0).length;
 
-  // tier -> [front, side(darker), top(lighter)]
-  const palette = [
-    ['#0c2430', '#081820', '#143644'], // zero / idle plots
-    ['#0e5566', '#0a3b47', '#1b7f93'], // low
-    ['#0f93b0', '#0a6d82', '#28b6d2'], // mid
-    ['#00c2e6', '#0090ad', '#5fe4ff'], // high
-    ['#00d9ff', '#00a7c4', '#aef4ff'], // peak
-  ];
-  const tierFor = c => {
-    if (c === 0) return 0;
+  // isometric projection: tile half-width TW, half-depth TD (2:1 iso)
+  const TW = 8, TD = 4;
+  const COLS = 30;                 // buildings per row
+  const rows = Math.ceil(days.length / COLS);
+  // center the diamond: width span = (COLS+rows)*TW ; place origin so it fits
+  const spanW = (COLS + rows) * TW;
+  const ox = Math.round(W / 2 - (COLS - rows) * TW / 2);  // horizontally center the diamond
+  const oy = 196;
+
+  // intensity -> top-face color (roof glows brighter with activity)
+  const roofFor = (c) => {
+    if (c === 0) return '#12324a';
     const r = c / max;
-    if (r < 0.25) return 1;
-    if (r < 0.5) return 2;
-    if (r < 0.75) return 3;
-    return 4;
+    if (r < 0.25) return '#1f6f99';
+    if (r < 0.5) return '#2f81f7';
+    if (r < 0.75) return '#1fd5ff';
+    return '#7df9ff';
   };
+  const LEFT = '#1a2440', RIGHT = '#111831';  // shaded faces (constant for night look)
 
-  let buildings = '', glows = '';
-  weeks.forEach((c, i) => {
-    const x = originX + i * step;
-    if (x + fw + depth > W - 34) return;
-    const t = tierFor(c);
-    const [front, side, top] = palette[t];
-    const hgt = c === 0 ? 4 : 18 + Math.sqrt(c / max) * 140;
-    const yTop = baseY - hgt;
-
-    // front face
-    buildings += `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${fw}" height="${hgt.toFixed(1)}" fill="${front}"/>`;
-    // side face (parallelogram, pushed up-right for iso depth)
-    buildings += `<path d="M${(x + fw).toFixed(1)} ${baseY} L${(x + fw).toFixed(1)} ${yTop.toFixed(1)} L${(x + fw + depth).toFixed(1)} ${(yTop - depth).toFixed(1)} L${(x + fw + depth).toFixed(1)} ${(baseY - depth).toFixed(1)} Z" fill="${side}"/>`;
-    // top face (rhombus)
-    buildings += `<path d="M${x.toFixed(1)} ${yTop.toFixed(1)} L${(x + fw).toFixed(1)} ${yTop.toFixed(1)} L${(x + fw + depth).toFixed(1)} ${(yTop - depth).toFixed(1)} L${(x + depth).toFixed(1)} ${(yTop - depth).toFixed(1)} Z" fill="${top}"/>`;
-    // lit window strip + glow for taller tiers
-    if (t >= 2) {
-      glows += `<rect x="${(x + 1.5).toFixed(1)}" y="${yTop.toFixed(1)}" width="${(fw - 3).toFixed(1)}" height="3" fill="#f0fbff" opacity=".9"/>`;
-    }
+  // iso transform
+  const iso = (col, row) => ({
+    x: ox + (col - row) * TW,
+    y: oy + (col + row) * TD,
   });
+
+  // draw back-to-front (far rows first) so nearer buildings overlap correctly
+  let buildings = '', windows = '';
+  const order = [];
+  days.forEach((d, i) => {
+    const col = i % COLS, row = Math.floor(i / COLS);
+    order.push({ d, col, row, i });
+  });
+  order.sort((a, b) => (a.row + a.col) - (b.row + b.col));
+
+  for (const { d, col, row } of order) {
+    const c = d.contributionCount;
+    const base = iso(col, row);
+    const h = c === 0 ? 3 : 8 + Math.sqrt(c / max) * 90;
+    const roof = roofFor(c);
+    // bottom diamond corners
+    const bx = base.x, by = base.y;
+    const topY = by - h;
+    // left face
+    buildings += `<path d="M${(bx - TW).toFixed(1)},${(by - TD).toFixed(1)}L${bx.toFixed(1)},${by.toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}L${(bx - TW).toFixed(1)},${(topY - TD).toFixed(1)}Z" fill="${LEFT}"/>`;
+    // right face
+    buildings += `<path d="M${bx.toFixed(1)},${by.toFixed(1)}L${(bx + TW).toFixed(1)},${(by - TD).toFixed(1)}L${(bx + TW).toFixed(1)},${(topY - TD).toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}Z" fill="${RIGHT}"/>`;
+    // top face (roof diamond)
+    buildings += `<path d="M${bx.toFixed(1)},${topY.toFixed(1)}L${(bx + TW).toFixed(1)},${(topY - TD).toFixed(1)}L${bx.toFixed(1)},${(topY - 2 * TD).toFixed(1)}L${(bx - TW).toFixed(1)},${(topY - TD).toFixed(1)}Z" fill="${roof}"/>`;
+    // lit window dots on busy buildings
+    if (c > 0 && h > 40) {
+      const n = Math.min(3, Math.floor(h / 28));
+      for (let w = 0; w < n; w++) {
+        const wy = topY + 10 + w * 14;
+        windows += `<rect x="${(bx - 6).toFixed(1)}" y="${wy.toFixed(1)}" width="2.5" height="3" fill="#ffe9a8" opacity=".85"/>`;
+        windows += `<rect x="${(bx + 3).toFixed(1)}" y="${(wy + TD).toFixed(1)}" width="2.5" height="3" fill="#ffe9a8" opacity=".7"/>`;
+      }
+    }
+  }
+
+  // night sky: stars
+  let stars = '';
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  for (let i = 0; i < 46; i++) {
+    const sx = 40 + rnd() * (W - 80), sy = 50 + rnd() * 120;
+    const r = (0.5 + rnd() * 0.9).toFixed(1);
+    const op = (0.35 + rnd() * 0.5).toFixed(2);
+    const tw = rnd() > 0.5 ? ' class="twinkle"' : '';
+    stars += `<circle${tw} cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r}" fill="#c9d1d9" opacity="${op}"/>`;
+  }
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="t d">
 <title id="t">Contribution city</title>
-<desc id="d">An isometric neon skyline with one building per day of the last year. ${meta.total} contributions, busiest day ${esc(meta.busiest.date)} with ${meta.busiest.contributionCount}.</desc>
+<desc id="d">An isometric night skyline with one building per day of the last year, taller and brighter for busier days. ${meta.total} contributions, busiest day ${esc(meta.busiest.date)} with ${meta.busiest.contributionCount}, ${active} active days.</desc>
 <style>
 ${FF}
 text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
-.cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}
+.cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}.fg{fill:#c9d1d9}
+@keyframes tw{0%,100%{opacity:.85}50%{opacity:.15}}
+@keyframes fly{from{transform:translate(-30px,0)}to{transform:translate(910px,-26px)}}
+@keyframes blink{0%,90%,100%{opacity:0}93%{opacity:1}}
+.twinkle{animation:tw 3.5s ease-in-out infinite}
+.plane{animation:fly 24s linear infinite}
+.bl{animation:blink 1.4s infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 <defs>
-<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#03040a"/><stop offset="1" stop-color="#061420"/></linearGradient>
-<filter id="winglow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="1.6"/></filter>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#050812"/><stop offset="1" stop-color="#030409"/></linearGradient>
+<radialGradient id="moonglow"><stop offset="0" stop-color="#f0f6fc" stop-opacity=".22"/><stop offset="1" stop-color="#f0f6fc" stop-opacity="0"/></radialGradient>
+<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter>
 </defs>
 <rect x="16" y="8" width="${W - 32}" height="${H - 16}" rx="4" fill="url(#sky)" stroke="#00d9ff" stroke-opacity=".4"/>
 <rect x="16" y="8" width="${W - 32}" height="30" fill="#00d9ff" fill-opacity=".08"/>
 <line x1="16" y1="38" x2="${W - 16}" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
-<text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ render ./contribution-city --year</text>
-<text x="${W - 34}" y="28" text-anchor="end" class="dim" style="font-size:12px">${meta.total} commits</text>
+<text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ render ./contribution-city --last 365d</text>
+<text x="${W - 34}" y="28" text-anchor="end" class="dim" style="font-size:12px">one building = one day</text>
+<g>${stars}</g>
+<circle cx="120" cy="86" r="34" fill="url(#moonglow)"/>
+<circle cx="120" cy="86" r="13" fill="#e6edf3"/>
+<circle cx="126" cy="81" r="11.5" fill="#050812"/>
+<g class="plane"><g transform="translate(0 70)"><rect x="0" y="0" width="13" height="2" rx="1" fill="#484f58"/><circle class="bl" cx="0" cy="1" r="1.5" fill="#ff7b72"/><circle class="bl" cx="13" cy="1" r="1.5" fill="#f0f6fc" style="animation-delay:.7s"/></g></g>
+<text x="${W - 34}" y="62" text-anchor="end" class="dim" style="font-size:12px"><tspan class="cy" font-weight="700">${fmt(meta.total)}</tspan> contributions · 365 days</text>
+<text x="${W - 34}" y="82" text-anchor="end" class="dim" style="font-size:12px">busiest <tspan class="fg">${esc(meta.busiest.date)}</tspan> · ${meta.busiest.contributionCount}</text>
+<text x="${W - 34}" y="102" text-anchor="end" class="dim" style="font-size:12px">${active} active days</text>
 ${buildings}
-<g filter="url(#winglow)">${glows}</g>
-<line x1="40" y1="${baseY}" x2="${W - 40}" y2="${baseY}" stroke="#00d9ff" stroke-opacity=".45"/>
-<text x="40" y="238" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> one bar = one week · busiest <tspan class="cy">${esc(meta.busiest.date)}</tspan> (${meta.busiest.contributionCount})</text>
+<g filter="url(#g)">${windows}</g>
 </svg>\n`;
   fs.writeFileSync(path.join(ROOT, 'assets', 'contribution-city.svg'), svg);
 }
