@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="60" viewBox="0 0 880 60" role="img" aria-labelledby="t">
+<title id="t">Links</title>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.cy{fill:#00d9ff}.dim{fill:#8b949e}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.dot{animation:pulse 2s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<defs><filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
+<rect width="880" height="60" fill="#03040a"/>
+<line x1="16" y1="30" x2="300" y2="30" stroke="#00d9ff" stroke-opacity=".3"/>
+<line x1="580" y1="30" x2="864" y2="30" stroke="#00d9ff" stroke-opacity=".3"/>
+<circle class="dot" cx="312" cy="30" r="3.5" fill="#00d9ff"/>
+<circle class="dot" cx="312" cy="30" r="3.5" fill="#00d9ff" filter="url(#g)"/>
+<text x="440" y="35" text-anchor="middle" letter-spacing="4" class="cy" font-weight="700" style="font-size:16px">// CONNECT</text>
+<circle class="dot" cx="568" cy="30" r="3.5" fill="#00d9ff"/>
+<circle class="dot" cx="568" cy="30" r="3.5" fill="#00d9ff" filter="url(#g)"/>
+</svg>

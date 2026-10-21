@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" role="img" aria-labelledby="t d">
+<title id="t">Tech stack</title>
+<desc id="d">Cloud: AWS. Practices: DevOps, CloudOps, AIOps. AI: Agentic AI, AI Agents, LLM orchestration. Tooling: Terraform, Kubernetes, Docker, CI/CD, Python.</desc>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.cy{fill:#00d9ff}.fg{fill:#c9d1d9}.dim{fill:#8b949e}.gr{fill:#3fb950}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.dot{animation:pulse 2.4s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#00d9ff" stroke-opacity=".05"/></pattern>
+<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter>
+</defs>
+<rect x="16" y="8" width="848" height="284" rx="4" fill="#03040a" stroke="#00d9ff" stroke-opacity=".4"/>
+<rect x="16" y="8" width="848" height="284" fill="url(#grid)"/>
+<rect x="16" y="8" width="848" height="30" fill="#00d9ff" fill-opacity=".08"/>
+<line x1="16" y1="38" x2="864" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
+<text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ cat /etc/stack.conf</text>
+<circle class="dot" cx="846" cy="23" r="3.5" fill="#3fb950"/>
+<circle class="dot" cx="846" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
+<text x="40" y="78" class="gr" style="font-size:14px">[cloud]</text>
+<text x="150" y="78" class="fg" style="font-size:14px">AWS</text>
+<text x="40" y="118" class="gr" style="font-size:14px">[ops]</text>
+<text x="150" y="118" class="fg" style="font-size:14px">DevOps · CloudOps · AIOps</text>
+<text x="40" y="158" class="gr" style="font-size:14px">[ai]</text>
+<text x="150" y="158" class="fg" style="font-size:14px">Agentic AI · AI Agents · LLM orchestration</text>
+<text x="40" y="198" class="gr" style="font-size:14px">[iac]</text>
+<text x="150" y="198" class="fg" style="font-size:14px">Terraform · CloudFormation · CDK</text>
+<text x="40" y="238" class="gr" style="font-size:14px">[runtime]</text>
+<text x="150" y="238" class="fg" style="font-size:14px">Kubernetes · Docker · Lambda · Python</text>
+<text x="40" y="274" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> stack loaded — <tspan class="cy">6 core domains</tspan>, production-ready</text>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="80" viewBox="0 0 880 80" role="img" aria-labelledby="t">
+<title id="t">Connection closed.</title>
+<style>
+text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}
+@keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.cursor{animation:blink 1.05s step-end infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<defs><filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter></defs>
+<rect width="880" height="80" fill="#03040a"/>
+<line x1="16" y1="20" x2="864" y2="20" stroke="#00d9ff" stroke-opacity=".3"/>
+<text x="32" y="50" class="gr" style="font-size:14px">$</text>
+<text x="48" y="50" class="dim" style="font-size:14px">exit</text>
+<text x="100" y="50" class="cy" style="font-size:14px">// thanks for visiting — let's build something</text>
+<rect class="cursor" x="628" y="38" width="9" height="15" fill="#00d9ff"/>
+<rect class="cursor" x="628" y="38" width="9" height="15" fill="#00d9ff" filter="url(#g)"/>
+<text x="848" y="50" text-anchor="end" class="dim" letter-spacing="1" style="font-size:11px">CONNECTION CLOSED</text>
+</svg>

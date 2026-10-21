@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="64" viewBox="0 0 260 64" role="img" aria-labelledby="t">
+<title id="t">DEV Community</title>
+<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}</style>
+<rect x="4" y="6" width="252" height="52" rx="6" fill="#03040a" stroke="#00d9ff" stroke-opacity=".55"/>
+<rect x="4" y="6" width="252" height="52" rx="6" fill="#00d9ff" fill-opacity=".05"/>
+<rect x="22" y="22" width="30" height="20" rx="4" fill="#00d9ff" fill-opacity=".15" stroke="#00d9ff" stroke-width="1.2"/>
+<text x="27" y="37" fill="#00d9ff" font-weight="800" style="font-size:12px">DEV</text>
+<text x="64" y="28" fill="#f0fbff" font-weight="700" style="font-size:15px">DEV.TO</text>
+<text x="64" y="46" fill="#8b949e" style="font-size:12px">read my articles</text>
+<path d="M232 20h8v8" fill="none" stroke="#00d9ff" stroke-width="1.5"/>
+</svg>
