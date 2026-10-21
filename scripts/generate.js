@@ -266,28 +266,31 @@ function writeWriting(arts) {
   fs.writeFileSync(path.join(ROOT, 'assets', 'writing', 'posts.json'), JSON.stringify(manifest, null, 2));
 }
 function sectionDivider(label, section, cmd) {
-  // George-style section header: "~/name" (cyan, underlined) left, "// NN" right,
-  // then an optional "$ command" subline. Rendered on a 60px bar.
+  // George-style section header panel (880x120): bordered box + grid, "~/name" with glow,
+  // "// NN" top-right, a split underline (dim full + bright accent left), and "$ command".
   const name = String(label).toLowerCase().replace(/\s+/g, '-');
-  const secTag = section ? `<text x="864" y="26" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:12px">// ${section}</text>` : '';
-  const cmdLine = cmd ? `<text x="16" y="52" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> ${esc(cmd)}</text>` : '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="880" height="60" viewBox="0 0 880 60" role="img" aria-labelledby="t">
+  const secTag = section ? `<text x="828" y="44" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:12px">// ${section}</text>` : '';
+  const cmdLine = cmd ? `<text x="52" y="96" class="dim" style="font-size:14px"><tspan class="gr">$</tspan> ${esc(cmd)}</text>` : '';
+  const accentEnd = 52 + 12 + name.length * 11; // length of the "~/name" text, roughly
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="880" height="120" viewBox="0 0 880 120" role="img" aria-labelledby="t">
 <title id="t">${esc(label)}</title>
 <style>
 ${FF}
 text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
-.cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-.dot{animation:pulse 2s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+.cy{fill:#00d9ff}.dim{fill:#8b949e}.gr{fill:#3fb950}.wh{fill:#f0fbff}
 </style>
-<defs><filter id="gd" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
-<rect width="880" height="60" fill="#03040a"/>
-<text x="16" y="26" class="cy" font-weight="700" style="font-size:17px"><tspan fill="#6e7681">~/</tspan>${esc(name)}</text>
-<text x="16" y="26" class="cy" font-weight="700" filter="url(#gd)" opacity=".5" style="font-size:17px"><tspan fill="#6e7681">~/</tspan>${esc(name)}</text>
-<line x1="16" y1="33" x2="${34 + name.length * 10}" y2="33" stroke="#00d9ff" stroke-width="2"/>
-<line x1="16" y1="33" x2="${34 + name.length * 10}" y2="33" stroke="#00d9ff" stroke-width="3" filter="url(#gd)" opacity=".6"/>
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#00d9ff" stroke-opacity=".05"/></pattern>
+<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<rect x="16" y="0" width="848" height="120" fill="#03040a"/>
+<rect x="16" y="0" width="848" height="120" fill="url(#grid)"/>
+<text x="52" y="44" font-weight="700" fill="#00d9ff" filter="url(#g)" opacity=".8" style="font-size:20px">~/</text>
+<text x="52" y="44" font-weight="700" style="font-size:20px"><tspan fill="#6e7681">~/</tspan><tspan class="wh">${esc(name)}</tspan></text>
 ${secTag}
+<line x1="52" y1="58" x2="828" y2="58" stroke="#00d9ff" stroke-opacity=".4"/>
+<line x1="52" y1="58" x2="${accentEnd}" y2="58" stroke="#00d9ff" stroke-width="2"/>
+<line x1="52" y1="58" x2="${accentEnd}" y2="58" stroke="#00d9ff" stroke-width="3" filter="url(#g)"/>
 ${cmdLine}
 </svg>\n`;
 }
