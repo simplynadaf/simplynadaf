@@ -34,7 +34,10 @@ async function main() {
   const data = await gh(`
     query($login:String!){
       user(login:$login){
+        createdAt
         followers{totalCount}
+        mergedPRs: pullRequests(states:MERGED){ totalCount }
+        allPRs: pullRequests{ totalCount }
         repositories(first:100, ownerAffiliations:OWNER, isFork:false, privacy:PUBLIC){
           totalCount
           nodes{
@@ -85,8 +88,8 @@ async function main() {
     stars, forks, followers: u.followers.totalCount,
     repos: u.repositories.totalCount,
     yearContribs: cal.totalContributions,
-    prs: cc.totalPullRequestContributions,
-    cur, longest,
+    prs: u.allPRs.totalCount, mergedPRs: u.mergedPRs.totalCount,
+    cur, longest, createdAt: u.createdAt,
   });
   writeCity(days, { total: cal.totalContributions, busiest });
 
@@ -123,22 +126,34 @@ async function main() {
     .sort((a, b) => b.count - a.count).slice(0, 8);
   writeRadar(external, { reviews: cc.totalPullRequestReviewContributions });
 
-  // Dev.to writing section (optional) — also feeds the B) signal oscilloscope.
+  // Dev.to writing section (optional) — also feeds the B) signal oscilloscope + Dev stats block.
   const devUser = process.env.DEVTO_USER;
   if (devUser) {
     try {
-      const r = await fetch(`https://dev.to/api/articles?username=${encodeURIComponent(devUser)}&per_page=30`);
+      const r = await fetch(`https://dev.to/api/articles?username=${encodeURIComponent(devUser)}&per_page=1000`);
+      let profile = null;
+      try {
+        const pr = await fetch(`https://dev.to/api/users/by_username?url=${encodeURIComponent(devUser)}`);
+        if (pr.ok) profile = await pr.json();
+      } catch {}
       if (r.ok) {
-        const arts = await r.json();
-        if (Array.isArray(arts) && arts.length) {
-          writeWriting(arts.slice(0, 4));
-          writeSignal(arts.slice(0, 16));
+        const all = await r.json();
+        if (Array.isArray(all) && all.length) {
+          writeWriting(all.slice(0, 4));
+          writeSignal(all.slice(0, 16));
+          const totals = {
+            articles: all.length,
+            reactions: all.reduce((a, x) => a + (x.public_reactions_count || 0), 0),
+            comments: all.reduce((a, x) => a + (x.comments_count || 0), 0),
+            joined: profile ? profile.joined_at : null,
+          };
+          writeDevStats(totals);
         }
       }
     } catch (e) { console.warn('Dev.to fetch failed:', e.message); }
   }
 
-  console.log('Regenerated stats, city, cards, spectrum, ticker, radar' + (devUser ? ', writing, signal' : ''));
+  console.log('Regenerated stats, city, cards, spectrum, ticker, radar' + (devUser ? ', writing, signal, devstats' : ''));
 }
 
 // ---- dynamic project cards ----
@@ -291,20 +306,60 @@ ${bodyLines}
 </svg>\n`;
 }
 
+function fmt(n) { return Number(n).toLocaleString('en-US'); }
+
+// boxed glow stat tile (George-style)
+function statTile(x, y, w, label, big, sub) {
+  return `<rect x="${x}" y="${y}" width="${w}" height="92" fill="#00d9ff" fill-opacity=".035" stroke="#00d9ff" stroke-opacity=".35"/>
+<path d="M${x} ${y + 12}V${y}H${x + 12}" fill="none" stroke="#00d9ff" stroke-width="2"/>
+<text x="${x + 16}" y="${y + 24}" letter-spacing="1.5" class="dim" style="font-size:10.5px">${esc(label)}</text>
+<text x="${x + 16}" y="${y + 52}" font-weight="700" fill="#00d9ff" filter="url(#g)" opacity=".55" style="font-size:28px">${esc(big)}</text>
+<text x="${x + 16}" y="${y + 52}" font-weight="700" fill="#00d9ff" style="font-size:28px">${esc(big)}</text>
+<text x="${x + 16}" y="${y + 80}" fill="#6e7681" style="font-size:12px">${esc(sub)}</text>`;
+}
+
 function writeStats(s) {
-  const row = (x, y, label, val) =>
-    `<text x="${x}" y="${y}" class="gr" style="font-size:13px">${esc(label)}</text>` +
-    `<text x="${x + 150}" y="${y}" class="fg" font-weight="700" style="font-size:16px">${esc(val)}</text>`;
-  const body = [
-    row(40, 82, '[contributions]', `${s.yearContribs} this year`),
-    row(40, 122, '[stars]', `${s.stars}`),
-    row(40, 162, '[pull requests]', `${s.prs}`),
-    row(440, 82, '[followers]', `${s.followers}`),
-    row(440, 122, '[repos]', `${s.repos}`),
-    row(440, 162, '[streak]', `${s.cur}d · max ${s.longest}d`),
-    `<text x="40" y="206" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> last sync — auto-updated daily via GitHub Actions</text>`,
+  const W = 880, H = 300;
+  const age = s.createdAt ? `${new Date().getFullYear() - new Date(s.createdAt).getFullYear()}y on GitHub` : '';
+  const since = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
+  const tiles = [
+    statTile(40, 78, 182, 'CONTRIBUTIONS 2026', fmt(s.yearContribs), 'this year'),
+    statTile(238, 78, 182, 'TOTAL STARS', fmt(s.stars), 'across all repos'),
+    statTile(436, 78, 182, 'PULL REQUESTS', fmt(s.prs), `${fmt(s.mergedPRs)} merged`),
+    statTile(634, 78, 182, 'CURRENT STREAK', `${s.cur}d`, `longest: ${s.longest}d`),
   ].join('\n');
-  fs.writeFileSync(path.join(ROOT, 'assets', 'stats.svg'), panel(880, 230, 'GitHub stats', body));
+  const line2 = [
+    statTile(40, 182, 182, 'PUBLIC REPOS', fmt(s.repos), 'owned, non-fork'),
+    statTile(238, 182, 182, 'FOLLOWERS', fmt(s.followers), 'on GitHub'),
+    statTile(436, 182, 380, 'MEMBER SINCE', since, age),
+  ].join('\n');
+  const body = `${tiles}\n${line2}
+<text x="40" y="292" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> auto-updated daily via GitHub Actions</text>`;
+  fs.writeFileSync(path.join(ROOT, 'assets', 'stats.svg'),
+    panel(W, H, `GitHub stats: ${fmt(s.yearContribs)} contributions this year, ${fmt(s.stars)} stars, ${fmt(s.prs)} PRs (${fmt(s.mergedPRs)} merged), ${fmt(s.followers)} followers, ${fmt(s.repos)} repos.`, body));
+}
+
+// Dev.to stats block (George-style tiles)
+function writeDevStats(d) {
+  const W = 880, H = 196;
+  const joined = d.joined || '';
+  const tiles = [
+    statTile(40, 78, 182, 'ARTICLES', fmt(d.articles), 'published'),
+    statTile(238, 78, 182, 'REACTIONS', fmt(d.reactions), 'total hearts'),
+    statTile(436, 78, 182, 'COMMENTS', fmt(d.comments), 'conversations'),
+    statTile(634, 78, 182, 'AVG / POST', fmt(Math.round(d.reactions / Math.max(1, d.articles))), 'reactions'),
+  ].join('\n');
+  const body = `${tiles}
+<text x="40" y="186" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> dev.to/${esc(DEVTO_USER_LABEL)} · writing since ${esc(joined)}</text>`;
+  fs.writeFileSync(path.join(ROOT, 'assets', 'devstats.svg'),
+    panelCmd('$ dev stats --live', W, H,
+      `Dev.to stats: ${fmt(d.articles)} articles, ${fmt(d.reactions)} reactions, ${fmt(d.comments)} comments.`, body));
+}
+const DEVTO_USER_LABEL = process.env.DEVTO_USER || 'sarvar_04';
+
+// variant of panel() with a custom command label
+function panelCmd(cmd, w, h, title, bodyLines) {
+  return panel(w, h, title, bodyLines).replace('$ gh stats --live', esc(cmd));
 }
 
 function writeCity(days, meta) {
