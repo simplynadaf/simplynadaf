@@ -373,16 +373,16 @@ function panelCmd(cmd, w, h, title, bodyLines) {
 function writeCity(days, meta) {
   // Isometric night skyline: one building per day, laid out as a shallow receding
   // strip (7 rows deep, like a week) that sweeps diagonally across the panel.
-  const W = 880, H = 360;
+  const W = 880, H = 410;
   const max = Math.max(1, ...days.map(d => d.contributionCount));
   const active = days.filter(d => d.contributionCount > 0).length;
 
   // iso tile: half-width TW, half-depth TD (2:1). Bigger = crisper than before.
-  const TW = 9, TD = 4.5;
+  const TW = 10, TD = 5;
   const ROWS = 7;                                  // shallow depth (one week)
   const COLS = Math.ceil(days.length / ROWS);      // ~53 columns across
   // Lay columns left→right, descending. Origin upper-left; strip sweeps down-right.
-  const ox = 70, oy = 120;
+  const ox = 48, oy = 148;
 
   // intensity tiers -> [roof(top), leftFace, rightFace]. Brighter all round than before.
   const tierFor = (c) => {
@@ -415,7 +415,7 @@ function writeCity(days, meta) {
     const base = iso(col, row);
     const bx = base.x, by = base.y;
     if (bx - TW < 22 || bx + TW > W - 22) continue;  // keep inside panel
-    const h = c === 0 ? 4 : 12 + Math.sqrt(c / max) * 104;
+    const h = c === 0 ? 5 : 14 + Math.sqrt(c / max) * 128;
     const topY = by - h;
     // left face (bx-TW..bx)
     buildings += `<path d="M${(bx - TW).toFixed(1)},${(by - TD).toFixed(1)}L${bx.toFixed(1)},${by.toFixed(1)}L${bx.toFixed(1)},${topY.toFixed(1)}L${(bx - TW).toFixed(1)},${(topY - TD).toFixed(1)}Z" fill="${lf}"/>`;
@@ -452,9 +452,9 @@ function writeCity(days, meta) {
     stars += `<circle${tw} cx="${sx.toFixed(1)}" cy="${sy.toFixed(1)}" r="${r}" fill="#c9d1d9" opacity="${op}"/>`;
   }
   // gradient legend "quiet → skyscraper"
-  let legend = '<text x="40" y="332" class="dim" style="font-size:11px">quiet</text>';
-  PAL.forEach((p, i) => { legend += `<rect x="${86 + i * 16}" y="324" width="12" height="10" fill="${p[0]}"/>`; });
-  legend += '<text x="178" y="332" class="dim" style="font-size:11px">skyscraper</text>';
+  let legend = '<text x="40" y="388" class="dim" style="font-size:11px">quiet</text>';
+  PAL.forEach((p, i) => { legend += `<rect x="${86 + i * 16}" y="380" width="12" height="10" fill="${p[0]}"/>`; });
+  legend += `<text x="178" y="388" class="dim" style="font-size:11px">skyscraper</text>`;
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="t d">
 <title id="t">Contribution city</title>
