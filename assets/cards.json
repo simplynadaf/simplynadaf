@@ -1,0 +1,26 @@
+[
+  {
+    "name": "devpub",
+    "url": "https://github.com/simplynadaf/devpub",
+    "file": "assets/card-devpub.svg",
+    "desc": "Write in your editor. Publish to Dev.to. Track what works. A CLI tool for Dev.to with analytics, semantic search, and content discovery."
+  },
+  {
+    "name": "aws-lean-mcp",
+    "url": "https://github.com/simplynadaf/aws-lean-mcp",
+    "file": "assets/card-aws-lean-mcp.svg",
+    "desc": "A read-only AWS cost-triage MCP server, shipped bloated (15 tools) and lean (4 tools), to demonstrate MCP tool design and cut token cost. Same account, same question: 7 tool calls down to 2."
+  },
+  {
+    "name": "aws-auditor-agent",
+    "url": "https://github.com/simplynadaf/aws-auditor-agent",
+    "file": "assets/card-aws-auditor-agent.svg",
+    "desc": "A read-only AI agent that audits a live AWS account for security risks and wasted spend. One JSON config + one skill checklist for Kiro Crew / Amazon Q Developer CLI. It cites real resources, computes real costs, and physically cannot change anything."
+  },
+  {
+    "name": "dog-court",
+    "url": "https://github.com/simplynadaf/dog-court",
+    "file": "assets/card-dog-court.svg",
+    "desc": "🏛️ Your dog committed a crime. AI gives them a fair trial. Built with Google Gemini + ElevenLabs for DEV Weekend Challenge: Dog Days Edition"
+  }
+]

@@ -27,14 +27,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_USER: ${{ github.repository_owner }}
+          DEVTO_USER: sarvar_04
         run: node scripts/generate.js
 
       - name: Commit if changed
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- assets/stats.svg assets/contribution-city.svg; then
-            git add assets/stats.svg assets/contribution-city.svg
+          git add assets/
+          if ! git diff --cached --quiet; then
             git commit -m "chore: refresh profile stats [skip ci]"
             git push
           else
