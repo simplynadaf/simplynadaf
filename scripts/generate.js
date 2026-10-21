@@ -341,19 +341,27 @@ function writeStats(s) {
 
 // Dev.to stats block (George-style tiles)
 function writeDevStats(d) {
-  const W = 880, H = 196;
+  const W = 880, H = 300;
   const joined = d.joined || '';
-  const tiles = [
-    statTile(40, 78, 182, 'ARTICLES', fmt(d.articles), 'published'),
-    statTile(238, 78, 182, 'REACTIONS', fmt(d.reactions), 'total hearts'),
-    statTile(436, 78, 182, 'COMMENTS', fmt(d.comments), 'conversations'),
-    statTile(634, 78, 182, 'AVG / POST', fmt(Math.round(d.reactions / Math.max(1, d.articles))), 'reactions'),
+  // Views and followers are not in the public API — supplied from the Dev.to dashboard via env.
+  const views = Number(process.env.DEVTO_VIEWS || 285938);
+  const followers = Number(process.env.DEVTO_FOLLOWERS || 34727);
+  const avg = Math.round(d.reactions / Math.max(1, d.articles));
+  const row1 = [
+    statTile(40, 78, 250, 'TOTAL POST VIEWS', fmt(views), 'all-time reads'),
+    statTile(315, 78, 250, 'FOLLOWERS', fmt(followers), 'on DEV Community'),
+    statTile(590, 78, 226, 'ARTICLES', fmt(d.articles), 'published'),
   ].join('\n');
-  const body = `${tiles}
-<text x="40" y="186" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> dev.to/${esc(DEVTO_USER_LABEL)} · writing since ${esc(joined)}</text>`;
+  const row2 = [
+    statTile(40, 182, 250, 'TOTAL REACTIONS', fmt(d.reactions), 'hearts, unicorns, saves'),
+    statTile(315, 182, 250, 'TOTAL COMMENTS', fmt(d.comments), 'conversations'),
+    statTile(590, 182, 226, 'AVG / POST', fmt(avg), 'reactions each'),
+  ].join('\n');
+  const body = `${row1}\n${row2}
+<text x="40" y="292" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> dev.to/${esc(DEVTO_USER_LABEL)} · writing since ${esc(joined)}</text>`;
   fs.writeFileSync(path.join(ROOT, 'assets', 'devstats.svg'),
     panelCmd('$ dev stats --live', W, H,
-      `Dev.to stats: ${fmt(d.articles)} articles, ${fmt(d.reactions)} reactions, ${fmt(d.comments)} comments.`, body));
+      `Dev.to stats: ${fmt(views)} total post views, ${fmt(followers)} followers, ${fmt(d.articles)} articles, ${fmt(d.reactions)} reactions, ${fmt(d.comments)} comments.`, body));
 }
 const DEVTO_USER_LABEL = process.env.DEVTO_USER || 'sarvar_04';
 
