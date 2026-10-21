@@ -40,12 +40,20 @@ async function main() {
           nodes{
             name description stargazerCount forkCount isArchived url pushedAt
             primaryLanguage{ name }
+            languages(first:10, orderBy:{field:SIZE, direction:DESC}){
+              edges{ size node{ name } }
+            }
             repositoryTopics(first:4){ nodes{ topic{ name } } }
           }
         }
         contributionsCollection{
           totalCommitContributions
           totalPullRequestContributions
+          totalPullRequestReviewContributions
+          pullRequestContributionsByRepository(maxRepositories:100){
+            repository{ nameWithOwner isPrivate owner{ login } }
+            contributions{ totalCount }
+          }
           contributionCalendar{
             totalContributions
             weeks{ contributionDays{ contributionCount date weekday } }
@@ -89,19 +97,48 @@ async function main() {
     .slice(0, 4);
   writeCards(ranked);
 
-  // Dev.to writing section (optional).
+  // ---- C) language spectrum (bytes across all repos) ----
+  const langBytes = {};
+  for (const r of repos) {
+    for (const e of (r.languages?.edges || [])) {
+      langBytes[e.node.name] = (langBytes[e.node.name] || 0) + e.size;
+    }
+  }
+  const langTotal = Object.values(langBytes).reduce((a, b) => a + b, 0) || 1;
+  const langs = Object.entries(langBytes)
+    .sort((a, b) => b[1] - a[1]).slice(0, 6)
+    .map(([name, size]) => ({ name, pct: size / langTotal }));
+  writeSpectrum(langs);
+
+  // ---- D) now-building ticker (most recently pushed non-archived, non-profile repo) ----
+  const latest = repos
+    .filter(r => !r.isArchived && r.name.toLowerCase() !== USER.toLowerCase())
+    .sort((a, b) => new Date(b.pushedAt) - new Date(a.pushedAt))[0];
+  writeTicker(latest, { repos: u.repositories.totalCount });
+
+  // ---- E) open-source radar: PRs opened in OTHER people's repos ----
+  const external = (cc.pullRequestContributionsByRepository || [])
+    .filter(x => !x.repository.isPrivate && x.repository.owner.login.toLowerCase() !== USER.toLowerCase())
+    .map(x => ({ repo: x.repository.nameWithOwner, count: x.contributions.totalCount }))
+    .sort((a, b) => b.count - a.count).slice(0, 8);
+  writeRadar(external, { reviews: cc.totalPullRequestReviewContributions });
+
+  // Dev.to writing section (optional) — also feeds the B) signal oscilloscope.
   const devUser = process.env.DEVTO_USER;
   if (devUser) {
     try {
-      const r = await fetch(`https://dev.to/api/articles?username=${encodeURIComponent(devUser)}&per_page=4`);
+      const r = await fetch(`https://dev.to/api/articles?username=${encodeURIComponent(devUser)}&per_page=30`);
       if (r.ok) {
         const arts = await r.json();
-        if (Array.isArray(arts) && arts.length) writeWriting(arts.slice(0, 4));
+        if (Array.isArray(arts) && arts.length) {
+          writeWriting(arts.slice(0, 4));
+          writeSignal(arts.slice(0, 16));
+        }
       }
     } catch (e) { console.warn('Dev.to fetch failed:', e.message); }
   }
 
-  console.log('Regenerated stats, city, cards' + (devUser ? ', writing' : ''));
+  console.log('Regenerated stats, city, cards, spectrum, ticker, radar' + (devUser ? ', writing, signal' : ''));
 }
 
 // ---- dynamic project cards ----
@@ -348,6 +385,153 @@ ${buildings}
 <text x="40" y="238" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> one bar = one week · busiest <tspan class="cy">${esc(meta.busiest.date)}</tspan> (${meta.busiest.contributionCount})</text>
 </svg>\n`;
   fs.writeFileSync(path.join(ROOT, 'assets', 'contribution-city.svg'), svg);
+}
+
+// shared console panel chrome with an animated scanline (A)
+function consolePanel(file, W, H, cmd, right, inner, descText, title) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="t d">
+<title id="t">${esc(title)}</title><desc id="d">${esc(descText)}</desc>
+<style>
+${FF}
+text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.cy{fill:#00d9ff}.fg{fill:#c9d1d9}.dim{fill:#8b949e}.gr{fill:#3fb950}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes scan{0%{transform:translateY(0)}100%{transform:translateY(${H - 50}px)}}
+.dot{animation:pulse 2.4s ease-in-out infinite}
+.scan{animation:scan 7s linear infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<defs>
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="#00d9ff" stroke-opacity=".05"/></pattern>
+<filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter>
+<linearGradient id="scanfade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#00d9ff" stop-opacity="0"/><stop offset="1" stop-color="#00d9ff" stop-opacity=".35"/></linearGradient>
+<clipPath id="clip${title.replace(/\W/g,'')}"><rect x="18" y="40" width="${W - 36}" height="${H - 48}"/></clipPath>
+</defs>
+<rect x="16" y="8" width="${W - 32}" height="${H - 16}" rx="4" fill="#03040a" stroke="#00d9ff" stroke-opacity=".4"/>
+<rect x="16" y="8" width="${W - 32}" height="${H - 16}" fill="url(#grid)"/>
+<g clip-path="url(#clip${title.replace(/\W/g,'')})">
+<rect class="scan" x="18" y="40" width="${W - 36}" height="26" fill="url(#scanfade)" opacity=".4"/>
+</g>
+<rect x="16" y="8" width="${W - 32}" height="30" fill="#00d9ff" fill-opacity=".08"/>
+<line x1="16" y1="38" x2="${W - 16}" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
+<text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">${esc(cmd)}</text>
+${right ? `<text x="${W - 34}" y="28" text-anchor="end" class="dim" style="font-size:12px">${esc(right)}</text>` : ''}
+<circle class="dot" cx="${right ? W - 170 : W - 34}" cy="23" r="3.5" fill="#3fb950"/>
+<circle class="dot" cx="${right ? W - 170 : W - 34}" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
+${inner}
+</svg>\n`;
+  fs.writeFileSync(path.join(ROOT, 'assets', file), svg);
+}
+
+// ---- C) language spectrum ----
+function writeSpectrum(langs) {
+  const W = 880, H = 150, x0 = 40, barW = W - 80, y = 78;
+  let seg = '', legend = '', cx = x0;
+  const colors = ['#00d9ff', '#3fb950', '#ff2bd6', '#f0b429', '#9d6bff', '#2bb0ff'];
+  langs.forEach((l, i) => {
+    const w = Math.max(2, l.pct * barW);
+    seg += `<rect x="${cx.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="16" fill="${colors[i % colors.length]}" opacity=".9"/>`;
+    seg += `<rect x="${cx.toFixed(1)}" y="${y}" width="${w.toFixed(1)}" height="3" fill="#f0fbff" opacity=".5"/>`;
+    cx += w + 2;
+    const lx = x0 + (i % 3) * 280, ly = 116 + Math.floor(i / 3) * 20;
+    legend += `<circle cx="${lx}" cy="${ly - 4}" r="4" fill="${colors[i % colors.length]}"/>`;
+    legend += `<text x="${lx + 12}" y="${ly}" class="fg" style="font-size:12.5px">${esc(l.name)} <tspan class="dim">${(l.pct * 100).toFixed(1)}%</tspan></text>`;
+  });
+  const inner = `${seg}${legend}`;
+  consolePanel('spectrum.svg', W, H, '$ spectralyze --languages',
+    `${langs.length} detected`, inner,
+    'Language spectrum: ' + langs.map(l => `${l.name} ${(l.pct*100).toFixed(1)}%`).join(', '),
+    'Language spectrum');
+}
+
+// ---- D) now-building ticker ----
+function writeTicker(repo, meta) {
+  const W = 880, H = 70;
+  const name = repo ? esc(repo.name) : '—';
+  const desc = repo && repo.description ? esc(repo.description.slice(0, 60)) : '';
+  const when = repo ? new Date(repo.pushedAt).toISOString().slice(0, 10) : '';
+  const inner = `
+<circle class="dot" cx="42" cy="40" r="5" fill="#3fb950"/>
+<circle class="dot" cx="42" cy="40" r="5" fill="#3fb950" filter="url(#g)"/>
+<text x="58" y="45" class="gr" style="font-size:14px">&gt;</text>
+<text x="78" y="45" class="fg" font-weight="700" style="font-size:14px">currently shipping: <tspan class="cy">${name}</tspan></text>
+<text x="${W - 34}" y="45" text-anchor="end" class="dim" style="font-size:12px">pushed ${esc(when)}</text>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="t d">
+<title id="t">Now building</title><desc id="d">Currently shipping ${name}${desc ? ' — ' + desc : ''}, pushed ${esc(when)}.</desc>
+<style>
+${FF}
+text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.cy{fill:#00d9ff}.fg{fill:#c9d1d9}.dim{fill:#8b949e}.gr{fill:#3fb950}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dot{animation:pulse 1.8s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+<defs><filter id="g" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>
+<rect x="16" y="8" width="${W - 32}" height="${H - 16}" rx="4" fill="#03040a" stroke="#00d9ff" stroke-opacity=".4"/>
+<rect x="16" y="8" width="${W - 32}" height="${H - 16}" rx="4" fill="#00d9ff" fill-opacity=".04"/>
+${inner}
+</svg>\n`;
+  fs.writeFileSync(path.join(ROOT, 'assets', 'ticker.svg'), svg);
+}
+
+// ---- E) open-source radar ----
+function writeRadar(external, meta) {
+  const W = 880, H = 230, cx = 150, cy = 120, R = 82;
+  let rings = '';
+  for (let i = 1; i <= 3; i++) rings += `<circle cx="${cx}" cy="${cy}" r="${(R / 3) * i}" fill="none" stroke="#00d9ff" stroke-opacity=".18"/>`;
+  rings += `<line x1="${cx - R}" y1="${cy}" x2="${cx + R}" y2="${cy}" stroke="#00d9ff" stroke-opacity=".18"/>`;
+  rings += `<line x1="${cx}" y1="${cy - R}" x2="${cx}" y2="${cy + R}" stroke="#00d9ff" stroke-opacity=".18"/>`;
+  // sweeping wedge
+  const sweep = `<g style="transform-origin:${cx}px ${cy}px"><path d="M${cx} ${cy} L${cx + R} ${cy} A${R} ${R} 0 0 0 ${cx + R * Math.cos(-0.5)} ${cy + R * Math.sin(-0.5)} Z" fill="url(#sweepgrad)" opacity=".5"><animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="360 ${cx} ${cy}" dur="4s" repeatCount="indefinite"/></path></g>`;
+  // blips
+  const maxc = Math.max(1, ...external.map(e => e.count));
+  let blips = '';
+  external.forEach((e, i) => {
+    const ang = (i / Math.max(1, external.length)) * Math.PI * 2 - Math.PI / 2;
+    const rad = 24 + (e.count / maxc) * (R - 28);
+    const bx = cx + Math.cos(ang) * rad, by = cy + Math.sin(ang) * rad;
+    blips += `<circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="3.4" fill="#3fb950"><animate attributeName="opacity" values="1;.3;1" dur="${(2 + i * 0.2).toFixed(1)}s" repeatCount="indefinite"/></circle>`;
+  });
+  // list
+  let list = '';
+  external.slice(0, 6).forEach((e, i) => {
+    list += `<text x="300" y="${74 + i * 22}" class="fg" style="font-size:12.5px">${esc(e.repo.slice(0, 46))} <tspan class="gr">×${e.count}</tspan></text>`;
+  });
+  if (!external.length) list = `<text x="300" y="110" class="dim" style="font-size:13px">No external PRs in this window yet.</text>`;
+  const inner = `
+<defs><radialGradient id="sweepgrad"><stop offset="0" stop-color="#00d9ff" stop-opacity=".6"/><stop offset="1" stop-color="#00d9ff" stop-opacity="0"/></radialGradient></defs>
+${rings}${sweep}${blips}
+<text x="300" y="52" class="cy" style="font-size:12px">external pull requests · ${external.length} repos</text>
+${list}`;
+  consolePanel('radar.svg', W, H, '$ scan --open-source',
+    `${meta.reviews} reviews`, inner,
+    'Open-source radar: pull requests opened in other maintainers\' repositories.',
+    'Open source radar');
+}
+
+// ---- B) signal oscilloscope (Dev.to reactions per post) ----
+function writeSignal(arts) {
+  const W = 880, H = 180, x0 = 44, x1 = W - 40, midY = 108;
+  const series = arts.map(a => a.public_reactions_count).reverse();
+  const max = Math.max(1, ...series);
+  const n = series.length;
+  const stepX = (x1 - x0) / Math.max(1, n - 1);
+  let pts = series.map((v, i) => `${(x0 + i * stepX).toFixed(1)},${(midY - (v / max) * 68).toFixed(1)}`).join(' ');
+  // peak
+  let peakI = 0; series.forEach((v, i) => { if (v > series[peakI]) peakI = i; });
+  const peak = arts.slice().reverse()[peakI];
+  const px = x0 + peakI * stepX, py = midY - (series[peakI] / max) * 68;
+  const inner = `
+<line x1="${x0}" y1="${midY}" x2="${x1}" y2="${midY}" stroke="#00d9ff" stroke-opacity=".2"/>
+<polyline points="${pts}" fill="none" stroke="#00d9ff" stroke-width="2" stroke-linejoin="round" filter="url(#g)"/>
+<polyline points="${pts}" fill="none" stroke="#5fe4ff" stroke-width="1.4" stroke-linejoin="round"/>
+${series.map((v, i) => `<circle cx="${(x0 + i * stepX).toFixed(1)}" cy="${(midY - (v / max) * 68).toFixed(1)}" r="2.2" fill="#00d9ff"/>`).join('')}
+<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="none" stroke="#3fb950" stroke-width="1.6"><animate attributeName="r" values="5;9;5" dur="2.2s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;.3;1" dur="2.2s" repeatCount="indefinite"/></circle>
+<text x="${x0}" y="150" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> peak: <tspan class="cy">"${esc((peak.title || '').slice(0, 42))}"</tspan> — ${series[peakI]} reactions</text>`;
+  consolePanel('signal.svg', W, H, '$ scope --writing-engagement',
+    `${n} posts`, inner,
+    'Signal: reactions per Dev.to post, newest right. Peak ' + series[peakI] + ' reactions.',
+    'Writing signal');
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
