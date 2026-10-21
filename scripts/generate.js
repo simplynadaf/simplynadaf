@@ -280,7 +280,8 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 </svg>\n`;
 }
 
-function panel(w, h, title, bodyLines) {
+function panel(w, h, title, bodyLines, section) {
+  const secTag = section ? `<text x="${w - 48}" y="27" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:11px">// ${section}</text>` : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-labelledby="t d">
 <title id="t">Stats</title><desc id="d">${esc(title)}</desc>
 <style>
@@ -300,6 +301,7 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <rect x="16" y="8" width="${w - 32}" height="30" fill="#00d9ff" fill-opacity=".08"/>
 <line x1="16" y1="38" x2="${w - 16}" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ gh stats --live</text>
+${secTag}
 <circle class="dot" cx="${w - 34}" cy="23" r="3.5" fill="#3fb950"/>
 <circle class="dot" cx="${w - 34}" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
 ${bodyLines}
@@ -336,7 +338,7 @@ function writeStats(s) {
   const body = `${tiles}\n${line2}
 <text x="40" y="292" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> auto-updated daily via GitHub Actions</text>`;
   fs.writeFileSync(path.join(ROOT, 'assets', 'stats.svg'),
-    panel(W, H, `GitHub stats: ${fmt(s.yearContribs)} contributions this year, ${fmt(s.stars)} stars, ${fmt(s.prs)} PRs (${fmt(s.mergedPRs)} merged), ${fmt(s.followers)} followers, ${fmt(s.repos)} repos.`, body));
+    panel(W, H, `GitHub stats: ${fmt(s.yearContribs)} contributions this year, ${fmt(s.stars)} stars, ${fmt(s.prs)} PRs (${fmt(s.mergedPRs)} merged), ${fmt(s.followers)} followers, ${fmt(s.repos)} repos.`, body, '01'));
 }
 
 // Dev.to stats block (George-style tiles)
@@ -361,13 +363,13 @@ function writeDevStats(d) {
 <text x="40" y="292" class="dim" style="font-size:12px"><tspan class="gr">$</tspan> dev.to/${esc(DEVTO_USER_LABEL)} · writing since ${esc(joined)}</text>`;
   fs.writeFileSync(path.join(ROOT, 'assets', 'devstats.svg'),
     panelCmd('$ dev stats --live', W, H,
-      `Dev.to stats: ${fmt(views)} total post views, ${fmt(followers)} followers, ${fmt(d.articles)} articles, ${fmt(d.reactions)} reactions, ${fmt(d.comments)} comments.`, body));
+      `Dev.to stats: ${fmt(views)} total post views, ${fmt(followers)} followers, ${fmt(d.articles)} articles, ${fmt(d.reactions)} reactions, ${fmt(d.comments)} comments.`, body, '04'));
 }
 const DEVTO_USER_LABEL = process.env.DEVTO_USER || 'sarvar_04';
 
 // variant of panel() with a custom command label
-function panelCmd(cmd, w, h, title, bodyLines) {
-  return panel(w, h, title, bodyLines).replace('$ gh stats --live', esc(cmd));
+function panelCmd(cmd, w, h, title, bodyLines, section) {
+  return panel(w, h, title, bodyLines, section).replace('$ gh stats --live', esc(cmd));
 }
 
 function writeCity(days, meta) {
@@ -481,7 +483,8 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <rect x="16" y="8" width="${W - 32}" height="30" fill="#00d9ff" fill-opacity=".08"/>
 <line x1="16" y1="38" x2="${W - 16}" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ render ./contribution-city --last 365d</text>
-<text x="${W - 34}" y="28" text-anchor="end" class="dim" style="font-size:12px">one building = one day</text>
+<text x="${W - 34}" y="28" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:11px">// 02</text>
+<text x="${W - 78}" y="28" text-anchor="end" class="dim" style="font-size:12px">one building = one day</text>
 <g>${stars}</g>
 <circle cx="792" cy="150" r="34" fill="url(#moonglow)"/>
 <circle cx="792" cy="150" r="13" fill="#e6edf3"/>
@@ -498,7 +501,9 @@ ${legend}
 }
 
 // shared console panel chrome with an animated scanline (A)
-function consolePanel(file, W, H, cmd, right, inner, descText, title) {
+function consolePanel(file, W, H, cmd, right, inner, descText, title, section) {
+  const dotX = right ? W - 170 : W - 34;
+  const secTag = section ? `<text x="${dotX - 16}" y="27" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:11px">// ${section}</text>` : '';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-labelledby="t d">
 <title id="t">${esc(title)}</title><desc id="d">${esc(descText)}</desc>
 <style>
@@ -526,8 +531,9 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <line x1="16" y1="38" x2="${W - 16}" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">${esc(cmd)}</text>
 ${right ? `<text x="${W - 34}" y="28" text-anchor="end" class="dim" style="font-size:12px">${esc(right)}</text>` : ''}
-<circle class="dot" cx="${right ? W - 170 : W - 34}" cy="23" r="3.5" fill="#3fb950"/>
-<circle class="dot" cx="${right ? W - 170 : W - 34}" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
+${secTag}
+<circle class="dot" cx="${dotX}" cy="23" r="3.5" fill="#3fb950"/>
+<circle class="dot" cx="${dotX}" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
 ${inner}
 </svg>\n`;
   fs.writeFileSync(path.join(ROOT, 'assets', file), svg);
@@ -551,7 +557,7 @@ function writeSpectrum(langs) {
   consolePanel('spectrum.svg', W, H, '$ spectralyze --languages',
     `${langs.length} detected`, inner,
     'Language spectrum: ' + langs.map(l => `${l.name} ${(l.pct*100).toFixed(1)}%`).join(', '),
-    'Language spectrum');
+    'Language spectrum', '03');
 }
 
 // ---- D) now-building ticker ----

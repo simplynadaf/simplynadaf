@@ -21,6 +21,7 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <rect x="16" y="8" width="848" height="30" fill="#00d9ff" fill-opacity=".08"/>
 <line x1="16" y1="38" x2="864" y2="38" stroke="#00d9ff" stroke-opacity=".4"/>
 <text x="32" y="28" class="cy" letter-spacing="2" style="font-size:13px">$ cat /etc/stack.conf</text>
+<text x="820" y="27" text-anchor="end" letter-spacing="2" fill="#6e7681" style="font-size:11px">// 05</text>
 <circle class="dot" cx="846" cy="23" r="3.5" fill="#3fb950"/>
 <circle class="dot" cx="846" cy="23" r="3.5" fill="#3fb950" filter="url(#g)"/>
 
