@@ -1,22 +1,22 @@
 [
   {
+    "title": "MCP Token Cost: I Cut My MCP Server From 15 Tools to 4",
+    "url": "https://dev.to/aws-builders/mcp-token-cost-i-cut-my-mcp-server-from-15-tools-to-4-cek",
+    "file": "assets/writing/post-1.svg"
+  },
+  {
     "title": "I let an open model delete 1,242 of my saved articles. On purpose. I feel lighter.",
     "url": "https://dev.to/sarvar_04/i-let-an-open-model-delete-1242-of-my-saved-articles-on-purpose-i-feel-lighter-l7f",
-    "file": "assets/writing/post-1.svg"
+    "file": "assets/writing/post-2.svg"
   },
   {
     "title": "I built an AWS agent that scores any GitHub repo before you clone it",
     "url": "https://dev.to/aws-builders/i-built-an-aws-agent-that-scores-any-github-repo-before-you-clone-it-4omp",
-    "file": "assets/writing/post-2.svg"
+    "file": "assets/writing/post-3.svg"
   },
   {
     "title": "I Built an Open-Weight AI That Prices Etsy Shops, On Your Laptop",
     "url": "https://dev.to/sarvar_04/i-built-an-open-weight-ai-that-prices-etsy-shops-on-your-laptop-24dk",
-    "file": "assets/writing/post-3.svg"
-  },
-  {
-    "title": "AI agent benchmark: I gave 9 models a destroy button and a job that needed it",
-    "url": "https://dev.to/sarvar_04/ai-agent-benchmark-i-gave-9-models-a-destroy-button-and-a-job-that-needed-it-3d0f",
     "file": "assets/writing/post-4.svg"
   }
 ]
