@@ -27,6 +27,6 @@ text{font-family:'JBM',ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mo
 <text x="22" y="110" class="dim" style="font-size:12.5px">shipped bloated (15 tools) and lean (4</text>
 <circle cx="26" cy="128" r="4" fill="#00d9ff"/>
 <text x="38" y="132" class="dim" style="font-size:12px">Python</text>
-<text x="150" y="132" class="gr" style="font-size:12px">★ 2</text>
+<text x="150" y="132" class="gr" style="font-size:12px">★ 3</text>
 <path d="M398 124h10v10" fill="none" stroke="#00d9ff" stroke-width="1.4"/>
 </svg>
