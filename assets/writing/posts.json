@@ -1,22 +1,22 @@
 [
   {
+    "title": "Stop Trusting npm Scans: Run Untrusted Packages in an Isolated AWS Sandbox",
+    "url": "https://dev.to/aws-builders/stop-trusting-npm-scans-run-untrusted-packages-in-an-isolated-aws-sandbox-cmm",
+    "file": "assets/writing/post-1.svg"
+  },
+  {
     "title": "I lost half a day to an n8n workflow that was \"working.\" It never ran.",
     "url": "https://dev.to/aws-builders/i-lost-half-a-day-to-an-n8n-workflow-that-was-working-it-never-ran-43p",
-    "file": "assets/writing/post-1.svg"
+    "file": "assets/writing/post-2.svg"
   },
   {
     "title": "I Almost Paid ₹1,499 for Prime Video I Never Use. An Open-Source AI Model Caught It.",
     "url": "https://dev.to/sarvar_04/i-almost-paid-1499-for-prime-video-i-never-use-an-open-source-ai-model-caught-it-1egm",
-    "file": "assets/writing/post-2.svg"
+    "file": "assets/writing/post-3.svg"
   },
   {
     "title": "MCP Token Cost: I Cut My MCP Server From 15 Tools to 4",
     "url": "https://dev.to/aws-builders/mcp-token-cost-i-cut-my-mcp-server-from-15-tools-to-4-cek",
-    "file": "assets/writing/post-3.svg"
-  },
-  {
-    "title": "I let an open model delete 1,242 of my saved articles. On purpose. I feel lighter.",
-    "url": "https://dev.to/sarvar_04/i-let-an-open-model-delete-1242-of-my-saved-articles-on-purpose-i-feel-lighter-l7f",
     "file": "assets/writing/post-4.svg"
   }
 ]
