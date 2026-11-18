@@ -12,15 +12,15 @@
     "desc": "A read-only AWS cost-triage MCP server, shipped bloated (15 tools) and lean (4 tools), to demonstrate MCP tool design and cut token cost. Same account, same question: 7 tool calls down to 2."
   },
   {
+    "name": "ai-fix-verifier",
+    "url": "https://github.com/simplynadaf/ai-fix-verifier",
+    "file": "assets/card-ai-fix-verifier.svg",
+    "desc": "AI Fix Verifier: an Amazon Nova Pro agent opens a PR, deterministic Python checks the commit and decides. No model grades the model. A Kiro Crew app."
+  },
+  {
     "name": "aws-auditor-agent",
     "url": "https://github.com/simplynadaf/aws-auditor-agent",
     "file": "assets/card-aws-auditor-agent.svg",
     "desc": "A read-only AI agent that audits a live AWS account for security risks and wasted spend. One JSON config + one skill checklist for Kiro Crew / Amazon Q Developer CLI. It cites real resources, computes real costs, and physically cannot change anything."
-  },
-  {
-    "name": "dog-court",
-    "url": "https://github.com/simplynadaf/dog-court",
-    "file": "assets/card-dog-court.svg",
-    "desc": "🏛️ Your dog committed a crime. AI gives them a fair trial. Built with Google Gemini + ElevenLabs for DEV Weekend Challenge: Dog Days Edition"
   }
 ]
