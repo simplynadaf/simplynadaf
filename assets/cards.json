@@ -18,9 +18,9 @@
     "desc": "A read-only AWS cost-triage MCP server, shipped bloated (15 tools) and lean (4 tools), to demonstrate MCP tool design and cut token cost. Same account, same question: 7 tool calls down to 2."
   },
   {
-    "name": "aws-auditor-agent",
-    "url": "https://github.com/simplynadaf/aws-auditor-agent",
-    "file": "assets/card-aws-auditor-agent.svg",
-    "desc": "A read-only AI agent that audits a live AWS account for security risks and wasted spend. One JSON config + one skill checklist for Kiro Crew / Amazon Q Developer CLI. It cites real resources, computes real costs, and physically cannot change anything."
+    "name": "the-checkpoint",
+    "url": "https://github.com/simplynadaf/the-checkpoint",
+    "file": "assets/card-the-checkpoint.svg",
+    "desc": "A social-stealth game where Amazon Bedrock plays the guard and Strands Decider 2B makes every trust decision, with a calibrated confidence on every call. Agent Experience Hackathon entry. #strands-decider-2b #policy"
   }
 ]
